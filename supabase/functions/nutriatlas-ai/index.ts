@@ -1,10 +1,10 @@
-// NutriAtlas meal planner — authenticated, server-side OpenAI integration.
-// Never place OPENAI_API_KEY or SUPABASE_SERVICE_ROLE_KEY in public HTML.
+// NutriAtlas meal planner — authenticated, server-side Groq free-tier open-weight AI.
+// Never place GROQ_API_KEY or SUPABASE_SERVICE_ROLE_KEY in public HTML.
 import { createClient } from 'jsr:@supabase/supabase-js@2.58.0';
 const URL = Deno.env.get('SUPABASE_URL') || '';
 const SECRET = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || '';
-const MODEL = Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini';
+const GROQ_KEY = Deno.env.get('GROQ_API_KEY') || '';
+const MODEL = 'openai/gpt-oss-20b'; // open-weight model available in Groq Free tier
 const ORIGIN = 'https://dhaoui0chaher.github.io';
 const ALLOWED = new Set(['https://dhaoui0chaher.github.io','http://localhost:8000','http://127.0.0.1:8000']);
 const SLOTS = ['breakfast','lunch','dinner','snack'] as const;
@@ -43,7 +43,7 @@ Deno.serve(async req=>{
  const {data:userResult,error:authError}=await admin.auth.getUser(token);
  const user=userResult?.user;
  if(authError||!user||user.is_anonymous)return response(401,{error:'Session invalid. Sign in again.'},origin);
- if(!OPENAI_KEY)return response(503,{error:'AI provider not configured; use Smart Mix while offline.'},origin);
+ if(!GROQ_KEY)return response(503,{error:'Groq free-tier key not configured yet. Smart Mix works without one.'},origin);
  let body:any;
  try{body=await req.json();if(!body||typeof body!=='object'||Array.isArray(body))throw Error();}catch{return response(400,{error:'Invalid JSON body'},origin);}
  const action=oneOf(body.action,['week','swap'] as const,'week');
@@ -76,15 +76,22 @@ Deno.serve(async req=>{
  const prompt=JSON.stringify({action,day,slot,cuisine,diet,goal,max_cook_minutes:minutes,avoid_allergies:excluded,dislike,pantry,replace_title:text(body.replace_title,100)});
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),45000);
  try{
-  const resp=await fetch('https://api.openai.com/v1/responses',{
+  const resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{
    method:'POST',signal:controller.signal,
-   headers:{'Authorization':'Bearer '+OPENAI_KEY,'Content-Type':'application/json'},
-   body:JSON.stringify({model:MODEL,instructions,input:prompt,max_output_tokens:action==='week'?10000:1100,store:false,
-    text:{format:{type:'json_schema',name:'nutriatlas_recipes',strict:true,schema}}})
+   headers:{'Authorization':'Bearer '+GROQ_KEY,'Content-Type':'application/json'},
+   body:JSON.stringify({
+    model:MODEL,stream:false,temperature:0.65,reasoning_effort:'low',
+    max_completion_tokens:action==='week'?5800:1050,
+    messages:[{role:'system',content:instructions},{role:'user',content:prompt}],
+    response_format:{type:'json_schema',json_schema:{name:'nutriatlas_recipes',strict:true,schema}}
+   })
   });
   const raw=await resp.json();
-  if(!resp.ok)return response(resp.status===429?429:502,{error:resp.status===429?'AI provider rate limit':'AI provider request failed. Check server model/credits.'},origin);
-  const output=(raw.output||[]).flatMap((o:any)=>o.content||[]).filter((c:any)=>c.type==='output_text').map((c:any)=>c.text).join('');
+  if(!resp.ok){
+   const isLimit=resp.status===429;
+   return response(isLimit?429:502,{error:isLimit?'Groq free-tier rate limit reached. Try again later or use Smart Mix.':'Groq generation failed. Check your free key, model access and request size.'},origin);
+  }
+  const output=raw?.choices?.[0]?.message?.content||'';
   let parsed:any;try{parsed=JSON.parse(output);}catch{return response(502,{error:'AI returned unparseable structured output'},origin);}
   const recipes:Recipe[]=parsed.recipes;
   if(!Array.isArray(recipes)||recipes.length!==(action==='week'?28:1))return response(502,{error:'AI returned incomplete meal schedule'},origin);
@@ -95,7 +102,7 @@ Deno.serve(async req=>{
    const key=r.day+'-'+r.slot;if(keySet.has(key))return response(502,{error:'Duplicate meal returned'},origin);keySet.add(key);
    for(const p of r.parts){if(!ids.has(p.id)||!Number.isInteger(p.g)||p.g<1||p.g>700)return response(502,{error:'AI returned unknown ingredient or weight'},origin);}
   }
-  return response(200,{recipes,source:'openai',model:MODEL,disclaimer:'Estimated nutrition from the illustrative NutriAtlas food table. Review allergens and recipes independently.'},origin);
+  return response(200,{recipes,source:'groq-free',model:MODEL,disclaimer:'Estimated nutrition from the illustrative NutriAtlas food table. Review allergens and recipes independently.'},origin);
  }catch(e){return response(502,{error:'AI service unavailable. Use Smart Mix or try again.'},origin)}
  finally{clearTimeout(timeout)}
 });

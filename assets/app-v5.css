@@ -66,3 +66,21 @@ body:not(.na-auth-mode) #naAuthShell{display:none}
 @media(max-width:980px){.na-ai-wrap{grid-template-columns:1fr}.na-auth-scene{padding:35px;min-height:350px}.na-auth-scene h1{font-size:35px}.na-auth-scene .na-dots{flex-wrap:wrap}}
 @media(max-width:660px){body.na-auth-mode #naAuthShell{grid-template-columns:1fr}.na-auth-scene{min-height:260px;padding:25px}.na-auth-scene h1{font-size:30px}.na-auth-scene p{font-size:13px}.na-auth-scene .na-dots{display:none}.na-auth-pane{padding:25px 22px}.na-auth-card h2{font-size:27px}
 #naMenuToggle{display:inline-block}.navtabs{display:none!important}body.na-menu-open .navtabs{display:flex!important;position:absolute;top:58px;left:10px;right:10px;flex-direction:column;align-items:stretch;background:white;border:1px solid #dbe5df;z-index:30;box-shadow:0 9px 24px #1a37282a;border-radius:14px;padding:9px}body.na-menu-open .navtabs .tab{text-align:left;padding:11px}.topline{position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.topline .capsule{display:none}.na-ai-hero{padding:22px}.na-recipe{grid-template-columns:66px 1fr;gap:8px}.na-recipe .na-swaps{grid-column:2}.na-ai-panel{padding:16px}}
+
+/* Public recipe exploration (TheMealDB) */
+.na-live-panel{margin-top:17px}
+.na-live-pill{display:inline-block;vertical-align:middle;background:#e8f5e9;color:#2e6246;font-size:10px;font-weight:800;border:1px solid #cce6d1;border-radius:99px;padding:5px 9px;margin-left:8px}
+.na-live-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.na-live-tools input{flex:1 1 180px;min-width:100px}
+.na-live-tools button{border:0;background:#285943;color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.na-live-tools button:disabled{opacity:.6}
+.na-live-results{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:13px}
+.na-live-recipe{overflow:hidden;border-radius:12px;border:1px solid #e4ebe5;background:#fafdfa}
+.na-live-recipe img{width:100%;height:156px;object-fit:cover;display:block}
+.na-live-content{padding:13px}
+.na-live-meta{font-size:11px;color:#6c8b75;margin-bottom:8px}
+.na-live-content strong{font-size:14px;color:#224934}
+.na-live-ingredients{font-size:11px;line-height:1.55;color:#4b6d58;margin:9px 0}
+.na-live-recipe details{font-size:11px;color:#2c6345}
+.na-live-recipe details p{white-space:pre-line;color:#466250;line-height:1.65}
+.na-live-panel a{color:#206d45;text-decoration:underline}

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'assets/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -30,6 +31,12 @@ jobs:
           test -s index.html
           mkdir -p _site
           cp index.html _site/index.html
+          test -s assets/app-v5.js
+          test -s assets/app-v5.css
+          test -s assets/live-recipes.js
+          node --check assets/app-v5.js
+          node --check assets/live-recipes.js
+          cp -R assets _site/assets
           touch _site/.nojekyll
       - name: Configure Pages
         uses: actions/configure-pages@v5

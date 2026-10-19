@@ -25,7 +25,7 @@ Intended Supabase project reference: `ksddpaamsvmwfipymtyq` (the browser uses `h
 5. Confirm **Project Settings → Data API** exposes the `public` schema and the migration's authenticated grants apply. Test sign-up, sign-in, save, sign-out, sign-in again, and load.
 6. For production, rotate any previously shared secret/service-role keys. **Do not put secret or service-role credentials in HTML, JS, commits, screenshots or issue descriptions.**
 
-> **Deployment status (2026-10-19):** GitHub Pages deployment [succeeded on attempt 2](https://github.com/Dhaoui0Chaher/THE-DAILY-NUTRITION-EXPLORER/actions/runs/39247883358). The migration for Supabase project `ksddpaamsvmwfipymtyq` has **not** been executed: the connected Supabase account lacks access and only lists a different project. Cloud synchronization remains inactive until the correct account is authorized, the SQL applied, and email Auth configured.
+> **Current setup (2026-10-19):** GitHub Pages is deployed. Supabase project `ksddpaamsvmwfipymtyq` is accessible through the connected project account; `nutriatlas_user_data` was verified with RLS and four user-ownership policies, and the AI quota migration was applied. The AI function was deployed with JWT verification. Email confirmation and the live two-account cloud flow still require full end-to-end testing.
 
 ## Account and synchronization behavior
 
@@ -52,11 +52,21 @@ Reference links and methodology are included in the app under **Sources & method
 
 The current website adds dedicated sign-in, sign-up, confirmation, forgot-password and reset-password routes, a responsive user menu, and the **AI Kitchen** tab. The existing nutrition reference and weekly shopping calculators are retained. A user can generate a full seven-day plan or replace only one dish. Nutrient calculations use only known ingredients and illustrative measured/rounded values; no AI-generated nutrient figures are trusted.
 
-### OpenAI integration (server-side only)
+### Free-tier generative AI: GroqCloud (GPT-OSS 20B)
 
-Deployed Supabase Edge Function: `nutriatlas-ai`, verified to require a JWT. Client calls require a logged-in user. A database RPC `nutriatlas_claim_ai_request` limits requests to 8 per user per UTC day, and the function validates ingredients, quantities, schedule shape and dietary filtering before returning data. The `nutriatlas_ai_usage` table deliberately has **no client-facing RLS policy**; it is only accessible to `service_role` from the server, and the security advisor may flag that intentional restriction as informational.
+The deployed Supabase Edge Function `nutriatlas-ai` (v2) now uses **GroqCloud's Free tier** with the open-weight `openai/gpt-oss-20b` model. This does **not** require an OpenAI API account or ChatGPT subscription. The **free Groq account still requires its own API key**: a website cannot safely perform anonymous model inference using an owner's key from browser JavaScript.
 
-**To activate real AI generation:** Open [Supabase Edge Function Secrets](https://supabase.com/dashboard/project/ksddpaamsvmwfipymtyq/settings/functions) and set `OPENAI_API_KEY` to an **OpenAI Platform API key** under the Supabase project secrets. Optionally set `OPENAI_MODEL` to a supported Structured Outputs model. Do **not** add this key to GitHub, HTML, or browser storage. API usage can incur charges and is not included free with ChatGPT subscriptions. Without it, the user can choose **Smart Mix** to generate varied menus from the local recipe catalogue, with no generative model. The Edge Function is built and deployed, but no production AI call has been verified with a configured provider key.
+1. Create a free account at [GroqCloud](https://console.groq.com) and issue an API key in [Groq API Keys](https://console.groq.com/keys). Stay on the Free tier; do not upgrade to paid Developer unless you intend to incur charges.
+2. In the [Supabase Edge Function Secrets dashboard](https://supabase.com/dashboard/project/ksddpaamsvmwfipymtyq/settings/functions), create a secret named **`GROQ_API_KEY`** using the Groq key. Do not put this in the browser, HTML or GitHub.
+3. Test **AI Kitchen → Generate with free-tier AI** while signed in. The function uses Groq's strict JSON Schema output, accepts only known ingredient IDs and sensible gram quantities, checks diet restrictions and validates 28 distinct meals.
+4. The existing `nutriatlas_claim_ai_request` database RPC enforces **8 AI requests per user per UTC day**. Groq's own **organization/model free-tier rate limits** may be lower at times, and API service availability is not guaranteed.
+5. Without a Groq key, **Smart Mix** provides algorithmic weekly meal variations offline, and **Explore live recipes** fetches actual public recipes from TheMealDB with no personal API key.
+
+The Groq model name contains `openai/` because that is the **model publisher namespace**, not a paid OpenAI API dependency. No `OPENAI_API_KEY` is required.
+
+### Live recipe exploration — TheMealDB
+
+The free public development endpoint at `https://www.themealdb.com/api/json/v1/1/` supports dish-name search and random meal discovery, including names, instructions, and ingredient measurements. Results display live in AI Kitchen with attribution. These external ingredient descriptions do **not** flow into the precise grocery/nutrient sums without verified gram conversions. A site owner should review [TheMealDB's terms](https://www.themealdb.com/terms_of_use.php) before commercial/public distribution: the development key is meant for educational/testing projects and commercial release may require supporter access.
 
 The AI quota migration in [`supabase/migrations/202610190002_ai_quota.sql`](supabase/migrations/202610190002_ai_quota.sql) was successfully applied to project `ksddpaamsvmwfipymtyq` on 2026-10-19. The prior `nutriatlas_user_data` table was confirmed existing with RLS and four owner policies.
 
@@ -66,6 +76,6 @@ In [Supabase Authentication URL Configuration](https://supabase.com/dashboard/pr
 
 ### Security and limitations
 
-The site is a static GitHub Pages application using a **publishable** Supabase key. It must never contain `sb_secret_`, service-role JWTs, or OpenAI provider secrets. The server-side function accepts allowed origins, verifies the signed-in Supabase user, has output-size and time limits, applies an atomic quota, and avoids returning unknown ingredient IDs. Review account access policies and test with two separate user accounts before inviting real users. Rotating previously exposed privileged keys remains essential.
+The site is a static GitHub Pages application using a **publishable** Supabase key. It must never contain `sb_secret_`, service-role JWTs, or Groq provider secrets. The server-side function accepts allowed origins, verifies the signed-in Supabase user, has output-size and time limits, applies an atomic quota, and avoids returning unknown ingredient IDs. Review account access policies and test with two separate user accounts before inviting real users. Rotating previously exposed privileged keys remains essential.
 
 The application remains an educational nutrition prototype; menus are **not medically certified** and the food-composition library is not comprehensive. Dietary restrictions are best-effort filters; users with food allergies should independently verify ingredients and manufacturing cross-contamination.

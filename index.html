@@ -10,6 +10,7 @@
 @media(max-width:1200px){.nutrient-grid,.foodgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.choicegrid{grid-template-columns:repeat(2,minmax(0,1fr))}.orbit{width:130px;height:130px}.orbit:before{font-size:63px}}@media(max-width:950px){.app{display:block}.sidebar{position:static;max-height:none;min-height:0;border-right:0;border-bottom:1px solid var(--line);padding:18px 20px}.sidebar .profile-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 12px}.sidebar .tip,.sidebar-footer{display:none}.sectionlabel{margin-top:14px}.subbrand{margin-bottom:4px}.main{padding:18px 20px 40px}.panels{grid-template-columns:1fr 1fr}}@media(max-width:700px){.sidebar .profile-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{padding:23px;min-height:0}.hero h1{font-size:29px}.hero .orbit{display:none}.panels,.plategrid{grid-template-columns:1fr}.nutrient-grid,.foodgrid,.choicegrid{grid-template-columns:1fr}.topline{display:block}.capsule{display:none}.navtabs{margin-bottom:8px;width:100%}.tab{padding:10px 12px}.detailhead{display:block}.detail .number{margin:10px 0}.detail .number small{text-align:left}.biglist .line{grid-template-columns:80px 1fr 66px;gap:6px}.stat .value{font-size:23px}.foodpick{grid-template-columns:1fr 70px 56px}}
 @media print{.sidebar,.topline,.choice button,.foodcard button,.bottom button,.foodpick{display:none!important}.app{display:block}.main{padding:0}.section{display:block!important;page-break-before:always}.hero{print-color-adjust:exact}}
 </style>
+<link rel="stylesheet" href="assets/app-v5.css" />
 <style>
 /* NutriAtlas v3 / smart meal studio */
 .mealhero{display:flex;align-items:center;justify-content:space-between;gap:30px;margin-bottom:22px;background:linear-gradient(125deg,#183e34,#2e6653);color:white;border-radius:22px;padding:35px 40px;overflow:hidden;position:relative;min-height:260px}
@@ -625,7 +626,7 @@ const $=s=>document.querySelector(s);
 const ui={email:$('#naEmail'),password:$('#naPassword'),signup:$('#naSignup'),login:$('#naLogin'),logout:$('#naLogout'),save:$('#naSave'),load:$('#naLoad'),autosync:$('#naAuto'),account:$('#naAccount'),status:$('#naStatus'),cloud:$('#naCloudState'),reset:$('#naReset')};
 if(!ui.email||!ui.account)return;
 let db=null,user=null,remoteExists=false,suppress=false,autosync=false,changedTimer=null,cloudReady=false,saveInFlight=false;
-const localKeys=['nutriatlas_plate_v1','nutriatlas_v2_meal','nutriatlas_week_v3'];
+const localKeys=['nutriatlas_plate_v1','nutriatlas_v2_meal','nutriatlas_week_v3','nutriatlas_ai_week_v1','nutriatlas_ai_pref_v1'];
 function status(message,isError=false){ui.status.textContent=message;ui.status.style.color=isError?'#ab4c36':'#436551';}
 function disable(yes){[ui.email,ui.password,ui.login,ui.signup].forEach(e=>e.disabled=yes);}
 function setAuthState(){
@@ -645,7 +646,8 @@ function validPlainObject(v){return v!==null&&typeof v==='object'&&!Array.isArra
 function snapshot(){
  const p={};for(const id of ['age','sex','life','weight','height','activity','smoker','diet'])p[id]=$('#'+id).value;
  let week={};try{week=JSON.parse(localStorage.getItem('nutriatlas_week_v3')||'{}')}catch{}
- return {schema_version:1,profile:p,plate:Array.isArray(plate)?plate:[],meal:validPlainObject(currentMeal)?currentMeal:{},week:validPlainObject(week)?week:{},meal_preferences:{style:$('#mealStyle').value,priority:$('#mealPriority').value,share:$('#mealShare').value},saved_at:new Date().toISOString()};
+ let aiWeek=null,aiPrefs={};try{aiWeek=JSON.parse(localStorage.getItem('nutriatlas_ai_week_v1')||'null');aiPrefs=JSON.parse(localStorage.getItem('nutriatlas_ai_pref_v1')||'{}')}catch{}
+  return {schema_version:1,profile:p,plate:Array.isArray(plate)?plate:[],meal:validPlainObject(currentMeal)?currentMeal:{},week:validPlainObject(week)?week:{},ai_week:aiWeek,ai_prefs:aiPrefs,meal_preferences:{style:$('#mealStyle').value,priority:$('#mealPriority').value,share:$('#mealShare').value},saved_at:new Date().toISOString()};
 }
 function apply(snapshotData){
  if(!validPlainObject(snapshotData)||snapshotData.schema_version!==1)throw Error('Unsupported or corrupted cloud snapshot.');
@@ -668,6 +670,8 @@ function apply(snapshotData){
   currentMeal=newMeal;localStorage.setItem('nutriatlas_v2_meal',JSON.stringify(currentMeal));
   const wk=validPlainObject(snapshotData.week)?snapshotData.week:{};
   localStorage.setItem('nutriatlas_week_v3',JSON.stringify(wk));
+   if(snapshotData.ai_week&&Array.isArray(snapshotData.ai_week.days)&&snapshotData.ai_week.days.length===7){localStorage.setItem('nutriatlas_ai_week_v1',JSON.stringify(snapshotData.ai_week))}else{localStorage.removeItem('nutriatlas_ai_week_v1')}
+   if(validPlainObject(snapshotData.ai_prefs))localStorage.setItem('nutriatlas_ai_pref_v1',JSON.stringify(snapshotData.ai_prefs));else localStorage.removeItem('nutriatlas_ai_pref_v1');
   weekPlan=[];weekFactors={};weekChecked={};weekReadState();
   const mp=validPlainObject(snapshotData.meal_preferences)?snapshotData.meal_preferences:{};
   for(const [id,key] of [['mealStyle','style'],['mealPriority','priority'],['mealShare','share']]){
@@ -773,6 +777,7 @@ window.addEventListener('online',()=>{if(user&&autosync)markChanged()});
 try{
  if(!window.supabase?.createClient)throw Error('Supabase library unavailable. Check your connection.');
  db=window.supabase.createClient(URL,PUBLIC_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  window.naCloudClient=db;window.dispatchEvent(new Event('nutriatlas:client'));
  db.auth.onAuthStateChange((event,session)=>{if(['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(event)){
   // Never await a Supabase query inside the auth callback: defer to avoid auth-lock deadlocks.
   setTimeout(()=>updateUser(session?.user||null),0);
@@ -784,5 +789,6 @@ setAuthState();
 
 });
 </script>
+<script src="assets/app-v5.js" defer></script>
 </body>
 </html>

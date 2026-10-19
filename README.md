@@ -1,4 +1,4 @@
-# NutriAtlas 4 — Daily Nutrition Explorer
+# NutriAtlas 5 — AI-assisted Daily Nutrition Explorer
 
 An **offline-first nutrition explorer** with optional Supabase accounts.
 
@@ -47,3 +47,25 @@ The `nutriatlas_user_data` migration is additive to the selected project; it doe
 This remains a research/demo prototype, not medical advice or a certified nutrition optimizer. Missing nutrient measurements are **unknown**, not zero. Purchases depend on recipe assumptions and adjustable cooking-to-shopping factors. Generated daily and weekly menus are not guaranteed to meet every individual dietary requirement, allergen restriction, or micronutrient target.
 
 Reference links and methodology are included in the app under **Sources & method**.
+
+## Version 5: Dedicated account screens and AI Kitchen
+
+The current website adds dedicated sign-in, sign-up, confirmation, forgot-password and reset-password routes, a responsive user menu, and the **AI Kitchen** tab. The existing nutrition reference and weekly shopping calculators are retained. A user can generate a full seven-day plan or replace only one dish. Nutrient calculations use only known ingredients and illustrative measured/rounded values; no AI-generated nutrient figures are trusted.
+
+### OpenAI integration (server-side only)
+
+Deployed Supabase Edge Function: `nutriatlas-ai`, verified to require a JWT. Client calls require a logged-in user. A database RPC `nutriatlas_claim_ai_request` limits requests to 8 per user per UTC day, and the function validates ingredients, quantities, schedule shape and dietary filtering before returning data. The `nutriatlas_ai_usage` table deliberately has **no client-facing RLS policy**; it is only accessible to `service_role` from the server, and the security advisor may flag that intentional restriction as informational.
+
+**To activate real AI generation:** Open [Supabase Edge Function Secrets](https://supabase.com/dashboard/project/ksddpaamsvmwfipymtyq/settings/functions) and set `OPENAI_API_KEY` to an **OpenAI Platform API key** under the Supabase project secrets. Optionally set `OPENAI_MODEL` to a supported Structured Outputs model. Do **not** add this key to GitHub, HTML, or browser storage. API usage can incur charges and is not included free with ChatGPT subscriptions. Without it, the user can choose **Smart Mix** to generate varied menus from the local recipe catalogue, with no generative model. The Edge Function is built and deployed, but no production AI call has been verified with a configured provider key.
+
+The AI quota migration in [`supabase/migrations/202610190002_ai_quota.sql`](supabase/migrations/202610190002_ai_quota.sql) was successfully applied to project `ksddpaamsvmwfipymtyq` on 2026-10-19. The prior `nutriatlas_user_data` table was confirmed existing with RLS and four owner policies.
+
+### Email authentication configuration
+
+In [Supabase Authentication URL Configuration](https://supabase.com/dashboard/project/ksddpaamsvmwfipymtyq/auth/url-configuration), allow `https://dhaoui0chaher.github.io/THE-DAILY-NUTRITION-EXPLORER/` for account verification and password resets. Enable and configure Email provider (and verification), and consider a custom SMTP provider for production delivery. Auth provider settings are not automatically managed by this repository.
+
+### Security and limitations
+
+The site is a static GitHub Pages application using a **publishable** Supabase key. It must never contain `sb_secret_`, service-role JWTs, or OpenAI provider secrets. The server-side function accepts allowed origins, verifies the signed-in Supabase user, has output-size and time limits, applies an atomic quota, and avoids returning unknown ingredient IDs. Review account access policies and test with two separate user accounts before inviting real users. Rotating previously exposed privileged keys remains essential.
+
+The application remains an educational nutrition prototype; menus are **not medically certified** and the food-composition library is not comprehensive. Dietary restrictions are best-effort filters; users with food allergies should independently verify ingredients and manufacturing cross-contamination.

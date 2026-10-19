@@ -10,9 +10,9 @@ Open `index.html` or serve it as a static site. Nutrition calculations work loca
 
 ### Publish using GitHub Pages
 
-In this repository: **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `/ (root)` → Save**.
+In this repository, open **Settings → Pages → Build and deployment → Source → GitHub Actions**. The committed [Pages workflow](.github/workflows/pages.yml) publishes only `index.html`. If GitHub Pages has not been enabled, deployment will fail at `Configure Pages` until you select this publishing source. After enabling it, use **Actions → Deploy NutriAtlas to GitHub Pages → Run workflow**.
 
-After deployment, configure the live site URL in your Supabase authentication redirect settings, including the exact path.
+The expected Pages URL after successful deployment is `https://dhaoui0chaher.github.io/THE-DAILY-NUTRITION-EXPLORER/` (not verified live yet). Configure this exact URL as the Supabase authentication Site URL and allowed redirect URL once Pages is activated.
 
 ## Connect Supabase project
 
@@ -25,7 +25,7 @@ Intended Supabase project reference: `ksddpaamsvmwfipymtyq` (the browser uses `h
 5. Confirm **Project Settings → Data API** exposes the `public` schema and the migration's authenticated grants apply. Test sign-up, sign-in, save, sign-out, sign-in again, and load.
 6. For production, rotate any previously shared secret/service-role keys. **Do not put secret or service-role credentials in HTML, JS, commits, screenshots or issue descriptions.**
 
-> **Deployment status:** The frontend and SQL migration are committed to GitHub. The migration has not been executed on the requested Supabase project because the connected Supabase account did not have access to that project at implementation time. The connection is only operational after applying the SQL and configuring Auth.
+> **Deployment status (2026-10-19):** The frontend, migration and Pages workflow are committed to GitHub. The [first Pages build](https://github.com/Dhaoui0Chaher/THE-DAILY-NUTRITION-EXPLORER/actions/runs/39247883358) failed because GitHub Pages has not been enabled under repository settings. The migration execution on the requested Supabase project was rejected with an authorization error; the connected Supabase account lists a different project. Cloud synchronization is not yet operational. The connection will become operational only after enabling Pages, applying the SQL and configuring Supabase Auth.
 
 ## Account and synchronization behavior
 
